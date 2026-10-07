@@ -115,21 +115,13 @@ resource "aws_security_group" "nat_instance" {
   description = "Security group for Free Tier NAT instance"
   vpc_id      = aws_vpc.this.id
 
-  # Allow outbound internet traffic from private app subnets
+  # Allow all outbound-forwarded traffic from the VPC
   ingress {
-    description = "Allow HTTP from private app subnets"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = var.private_app_subnet_cidrs
-  }
-
-  ingress {
-    description = "Allow HTTPS from private app subnets"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = var.private_app_subnet_cidrs
+    description = "Allow all inbound traffic from VPC for NAT routing"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = [var.vpc_cidr]
   }
 
   egress {
@@ -155,13 +147,38 @@ resource "aws_instance" "nat" {
 
   user_data = <<-EOF
               #!/bin/bash
-              echo 1 > /proc/sys/net/ipv4/ip_forward
-              echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
-              DEFAULT_IFACE=$(ip route show default | awk '{print $5}')
+              set -xe
+
+              # Enable IP forwarding
+              sysctl -w net.ipv4.ip_forward=1
+              echo "net.ipv4.ip_forward = 1" > /etc/sysctl.d/99-nat.conf
+
+              # Determine default interface
+              DEFAULT_IFACE=$(ip -4 route list 0/0 | awk '{print $5; exit}')
+
+              # Configure iptables NAT and FORWARD rules
+              iptables -F FORWARD
+              iptables -P FORWARD ACCEPT
+              iptables -t nat -F POSTROUTING
               iptables -t nat -A POSTROUTING -o $DEFAULT_IFACE -j MASQUERADE
-              dnf install -y iptables-services || true
-              iptables-save > /etc/sysconfig/iptables
-              systemctl enable --now iptables || true
+
+              # Create persistent systemd unit for reboots
+              cat <<'UNIT' > /etc/systemd/system/nat-setup.service
+              [Unit]
+              Description=NAT Routing Setup
+              After=network.target
+
+              [Service]
+              Type=oneshot
+              ExecStart=/bin/bash -c "sysctl -w net.ipv4.ip_forward=1 && DEFAULT_IFACE=\$(ip -4 route list 0/0 | awk '{print \$5; exit}') && iptables -P FORWARD ACCEPT && iptables -t nat -A POSTROUTING -o \$DEFAULT_IFACE -j MASQUERADE"
+              RemainAfterExit=true
+
+              [Install]
+              WantedBy=multi-user.target
+              UNIT
+
+              systemctl daemon-reload
+              systemctl enable --now nat-setup.service
               EOF
 
   tags = merge(var.tags, {
