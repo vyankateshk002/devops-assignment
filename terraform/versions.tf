@@ -16,14 +16,13 @@ terraform {
     }
   }
 
-  # Backend configuration (Local state by default for ease of testing;
-  # can be switched to S3 backend for team/CI/CD deployments)
-  # backend "s3" {
-  #   bucket         = "your-terraform-state-bucket"
-  #   key            = "devops-assignment/terraform.tfstate"
-  #   region         = "us-east-1"
-  #   dynamodb_table = "terraform-locks"
-  # }
+  # S3 Remote Backend for persistent CI/CD state
+  backend "s3" {
+    bucket  = "devops-assignment-tfstate-919519434135"
+    key     = "devops-assignment/terraform.tfstate"
+    region  = "us-east-1"
+    encrypt = true
+  }
 }
 
 provider "aws" {
