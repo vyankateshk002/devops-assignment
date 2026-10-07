@@ -6,8 +6,8 @@ variable "aws_region" {
 
 variable "aws_profile" {
   type        = string
-  description = "AWS CLI profile name configured for the assignment (non-default)"
-  default     = "assignment-access-key"
+  description = "AWS CLI profile name. If null, Terraform automatically uses environment variables or the default credential chain."
+  default     = null
 }
 
 variable "environment" {
