@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DevOps Practical Task | AWS 3-Tier Architecture Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo-area">
+        <div class="badge-tag">AWS PRODUCTION CLOUD</div>
+        <h1>DevOps Infrastructure & CI/CD</h1>
+        <p class="subtitle">Highly Available 3-Tier Architecture on AWS Free Tier with Terraform & GitHub Actions</p>
+      </div>
+      <div class="health-badge" id="overallHealth">
+        <span class="status-dot"></span>
+        <span id="healthText">Checking Health...</span>
+      </div>
+    </header>
+
+    <!-- Architecture Visual -->
+    <section class="arch-flow">
+      <div class="flow-step">
+        <div class="step-icon">🌐</div>
+        <div class="step-label">ALB (HTTPS / 443)</div>
+        <div class="step-sub">SSL / ACM Certificate</div>
+      </div>
+      <div class="flow-arrow">➔</div>
+      <div class="flow-step">
+        <div class="step-icon">⚡</div>
+        <div class="step-label">EC2 Auto Scaling</div>
+        <div class="step-sub" id="flowAz">AZ: Loading...</div>
+      </div>
+      <div class="flow-arrow">➔</div>
+      <div class="flow-step">
+        <div class="step-icon">🗄️</div>
+        <div class="step-label">RDS MySQL 8.0</div>
+        <div class="step-sub">Private DB Subnet</div>
+      </div>
+      <div class="flow-arrow">➔</div>
+      <div class="flow-step">
+        <div class="step-icon">🪣</div>
+        <div class="step-label">S3 App Storage</div>
+        <div class="step-sub">SSE-S3 Encrypted</div>
+      </div>
+    </section>
+
+    <!-- Metrics Grid -->
+    <section class="grid-cards">
+      <div class="card">
+        <div class="card-header">
+          <h3>EC2 Instance Details</h3>
+          <span class="badge blue">Compute</span>
+        </div>
+        <div class="card-body">
+          <div class="metric-row">
+            <span class="label">Instance ID:</span>
+            <span class="value mono" id="instId">Loading...</span>
+          </div>
+          <div class="metric-row">
+            <span class="label">Availability Zone:</span>
+            <span class="value mono" id="instAz">Loading...</span>
+          </div>
+          <div class="metric-row">
+            <span class="label">Private IP:</span>
+            <span class="value mono" id="instIp">Loading...</span>
+          </div>
+          <div class="metric-row">
+            <span class="label">Auto Scaling Group:</span>
+            <span class="value green">Active (Self-Healing)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>RDS MySQL (Private Subnet)</h3>
+          <span class="badge purple">Database</span>
+        </div>
+        <div class="card-body">
+          <div class="metric-row">
+            <span class="label">Connection Status:</span>
+            <span class="value" id="dbStatusBadge">Checking...</span>
+          </div>
+          <div class="metric-row">
+            <span class="label">DB Engine:</span>
+            <span class="value mono">MySQL 8.0 (db.t3.micro)</span>
+          </div>
+          <div class="metric-row">
+            <span class="label">Host Endpoint:</span>
+            <span class="value mono truncate" id="dbHost">Private Subnet</span>
+          </div>
+          <div class="metric-row">
+            <span class="label">Secrets Manager:</span>
+            <span class="value green">Integrated & Secured</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>S3 Object Storage</h3>
+          <span class="badge yellow">Storage</span>
+        </div>
+        <div class="card-body">
+          <div class="metric-row">
+            <span class="label">App Bucket:</span>
+            <span class="value mono truncate" id="s3Bucket">Loading...</span>
+          </div>
+          <div class="metric-row">
+            <span class="label">ALB Access Logs:</span>
+            <span class="value green">Enabled</span>
+          </div>
+          <div class="metric-row">
+            <span class="label">Encryption:</span>
+            <span class="value">AES-256 (SSE-S3)</span>
+          </div>
+          <button class="btn btn-secondary" id="testS3Btn" onclick="testS3Upload()">Test S3 PutObject</button>
+          <div class="action-feedback" id="s3Feedback"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Live Database CRUD Test -->
+    <section class="data-section">
+      <div class="section-header">
+        <h2>Live RDS Database Records</h2>
+        <p>Demonstrates active read/write operations from EC2 instances to RDS MySQL in private subnets</p>
+      </div>
+
+      <div class="crud-container">
+        <!-- Create Form -->
+        <form class="note-form" id="noteForm" onsubmit="handleCreateNote(event)">
+          <h3>Insert Record into MySQL</h3>
+          <div class="form-group">
+            <label for="noteTitle">Task / Note Title</label>
+            <input type="text" id="noteTitle" required placeholder="e.g. Terraform Deployment Verified" />
+          </div>
+          <div class="form-group">
+            <label for="noteContent">Details</label>
+            <textarea id="noteContent" rows="3" required placeholder="e.g. ALB routing traffic to ASG, RDS connection successful..."></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary" id="submitBtn">Save to Database</button>
+        </form>
+
+        <!-- Records List -->
+        <div class="notes-display">
+          <div class="display-header">
+            <h3>Recent Database Records</h3>
+            <button class="btn btn-sm" onclick="loadNotes()">Refresh</button>
+          </div>
+          <div class="notes-list" id="notesList">
+            <div class="loading-state">Loading records from RDS...</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>DevOps Engineer Practical Assignment &bull; Built with Terraform, AWS, Express.js & GitHub Actions</p>
+      <div class="footer-links">
+        <a href="/health" target="_blank">View /health JSON</a>
+        <a href="/api/info" target="_blank">View /api/info JSON</a>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    async function loadInfo() {
+      try {
+        const res = await fetch('/api/info');
+        const data = await res.json();
+        
+        document.getElementById('instId').textContent = data.metadata.instanceId || 'i-simulated';
+        document.getElementById('instAz').textContent = data.metadata.az || 'us-east-1a';
+        document.getElementById('flowAz').textContent = 'AZ: ' + (data.metadata.az || 'us-east-1');
+        document.getElementById('instIp').textContent = data.metadata.localIp || '10.0.11.x';
+        document.getElementById('dbHost').textContent = data.dbHost || 'Configured via Secrets Manager';
+        document.getElementById('s3Bucket').textContent = data.s3Bucket || 'devops-storage';
+
+        const dbStatusBadge = document.getElementById('dbStatusBadge');
+        if (data.dbStatus === 'connected') {
+          dbStatusBadge.innerHTML = '<span class="pill green">Connected</span>';
+        } else {
+          dbStatusBadge.innerHTML = '<span class="pill red">Disconnected</span>';
+        }
+      } catch (err) {
+        console.error('Failed to load info:', err);
+      }
+    }
+
+    async function checkHealth() {
+      try {
+        const res = await fetch('/health');
+        const data = await res.json();
+        const badge = document.getElementById('overallHealth');
+        const text = document.getElementById('healthText');
+        
+        if (data.status === 'healthy') {
+          badge.className = 'health-badge healthy';
+          text.textContent = 'System Healthy (200 OK)';
+        } else {
+          badge.className = 'health-badge degraded';
+          text.textContent = 'Degraded';
+        }
+      } catch (err) {
+        document.getElementById('overallHealth').className = 'health-badge degraded';
+        document.getElementById('healthText').textContent = 'Unreachable';
+      }
+    }
+
+    async function loadNotes() {
+      const container = document.getElementById('notesList');
+      try {
+        const res = await fetch('/api/notes');
+        const notes = await res.json();
+        
+        if (!Array.isArray(notes) || notes.length === 0) {
+          container.innerHTML = '<div class="empty-state">No records yet. Insert a test record using the form!</div>';
+          return;
+        }
+
+        container.innerHTML = notes.map(n => `
+          <div class="note-card">
+            <div class="note-header">
+              <span class="note-id">#${n.id}</span>
+              <strong class="note-title">${escapeHtml(n.title)}</strong>
+              <span class="note-time">${new Date(n.created_at).toLocaleTimeString()}</span>
+            </div>
+            <p class="note-body">${escapeHtml(n.content)}</p>
+          </div>
+        `).join('');
+      } catch (err) {
+        container.innerHTML = `<div class="error-state">Failed to load notes: ${err.message}</div>`;
+      }
+    }
+
+    async function handleCreateNote(e) {
+      e.preventDefault();
+      const title = document.getElementById('noteTitle').value.trim();
+      const content = document.getElementById('noteContent').value.trim();
+      const submitBtn = document.getElementById('submitBtn');
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving...';
+
+      try {
+        const res = await fetch('/api/notes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, content })
+        });
+        if (res.ok) {
+          document.getElementById('noteTitle').value = '';
+          document.getElementById('noteContent').value = '';
+          await loadNotes();
+        } else {
+          const errData = await res.json();
+          alert('Error: ' + (errData.error || 'Failed to save record'));
+        }
+      } catch (err) {
+        alert('Network error: ' + err.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save to Database';
+      }
+    }
+
+    async function testS3Upload() {
+      const fb = document.getElementById('s3Feedback');
+      const btn = document.getElementById('testS3Btn');
+      btn.disabled = true;
+      fb.textContent = 'Testing S3 IAM upload...';
+      fb.className = 'action-feedback';
+
+      try {
+        const res = await fetch('/api/s3/test', { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+          fb.textContent = `Success: Uploaded ${data.fileName} to ${data.bucket}`;
+          fb.className = 'action-feedback success';
+        } else {
+          fb.textContent = data.error || 'Upload failed';
+          fb.className = 'action-feedback error';
+        }
+      } catch (err) {
+        fb.textContent = 'Error: ' + err.message;
+        fb.className = 'action-feedback error';
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function escapeHtml(str) {
+      return (str || '').replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[m]));
+    }
+
+    loadInfo();
+    checkHealth();
+    loadNotes();
+    setInterval(checkHealth, 15000);
+  </script>
+</body>
+</html>

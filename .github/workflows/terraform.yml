@@ -1,0 +1,165 @@
+name: "Terraform CI/CD Pipeline"
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Terraform Action to execute"
+        required: true
+        default: "apply"
+        type: choice
+        options:
+          - "plan"
+          - "apply"
+          - "destroy"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  # -------------------------------------------------------------
+  # Job 1: Lint, Format, and Security Scan
+  # -------------------------------------------------------------
+  lint-and-validate:
+    name: "Lint & Validate"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Setup Terraform"
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.0"
+
+      - name: "Check Terraform Formatting"
+        run: terraform -chdir=terraform fmt -check
+
+      - name: "Initialize Terraform (Local backend for validation)"
+        run: terraform -chdir=terraform init -backend=false
+
+      - name: "Validate Terraform Configuration"
+        run: terraform -chdir=terraform validate
+
+      - name: "Security Scan with Trivy"
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "config"
+          scan-ref: "terraform"
+          severity: "HIGH,CRITICAL"
+          exit-code: "0" # Audit mode for CI/CD
+
+  # -------------------------------------------------------------
+  # Job 2: Terraform Plan (Runs on PRs or Manual Plan)
+  # -------------------------------------------------------------
+  terraform-plan:
+    name: "Terraform Plan"
+    needs: [lint-and-validate]
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'plan')
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Setup Terraform"
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.0"
+
+      - name: "Configure AWS Credentials"
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: "us-east-1"
+
+      - name: "Initialize Terraform"
+        run: terraform -chdir=terraform init
+
+      - name: "Terraform Plan"
+        id: plan
+        run: |
+          terraform -chdir=terraform plan \
+            -var="enable_nat_instance=true" \
+            -var="enable_nat_gateway=false" \
+            -no-color -out=tfplan
+
+  # -------------------------------------------------------------
+  # Job 3: Terraform Apply (Runs on Merge to Main or Manual Apply)
+  # -------------------------------------------------------------
+  terraform-apply:
+    name: "Terraform Apply"
+    needs: [lint-and-validate]
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply')
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Setup Terraform"
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.0"
+
+      - name: "Configure AWS Credentials"
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: "us-east-1"
+
+      - name: "Initialize Terraform"
+        run: terraform -chdir=terraform init
+
+      - name: "Terraform Apply"
+        run: |
+          terraform -chdir=terraform apply \
+            -var="enable_nat_instance=true" \
+            -var="enable_nat_gateway=false" \
+            -auto-approve
+
+      - name: "Extract Application Outputs"
+        run: |
+          echo "### Deployment Summary 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "- **HTTP Application URL:** $(terraform -chdir=terraform output -raw http_application_url)" >> $GITHUB_STEP_SUMMARY
+          echo "- **HTTPS Application URL:** $(terraform -chdir=terraform output -raw https_application_url)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Health Check Endpoint:** $(terraform -chdir=terraform output -raw health_check_url)" >> $GITHUB_STEP_SUMMARY
+          echo "- **NAT Strategy:** $(terraform -chdir=terraform output -raw nat_strategy)" >> $GITHUB_STEP_SUMMARY
+
+  # -------------------------------------------------------------
+  # Job 4: Terraform Destroy (Only triggered via workflow_dispatch)
+  # -------------------------------------------------------------
+  terraform-destroy:
+    name: "Terraform Teardown"
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Setup Terraform"
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.0"
+
+      - name: "Configure AWS Credentials"
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: "us-east-1"
+
+      - name: "Initialize Terraform"
+        run: terraform -chdir=terraform init
+
+      - name: "Terraform Destroy"
+        run: |
+          terraform -chdir=terraform destroy \
+            -var="enable_nat_instance=true" \
+            -var="enable_nat_gateway=false" \
+            -auto-approve
