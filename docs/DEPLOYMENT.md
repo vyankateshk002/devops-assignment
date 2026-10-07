@@ -13,9 +13,7 @@ This document provides a step-by-step walkthrough to deploy, validate, and tear 
 
 ---
 
-## 2. Setting Up AWS Credentials (Non-Default Profile)
-
-To keep your personal/work default AWS CLI profile isolated, the project uses a dedicated named profile: `assignment-access-key`.
+## 2. Setting Up AWS Credentials 
 
 ### Step 1: Configure Named Profile
 Run the following commands in PowerShell or Terminal:
@@ -23,8 +21,8 @@ Run the following commands in PowerShell or Terminal:
 aws configure --profile assignment-access-key
 ```
 When prompted, provide:
-- **AWS Access Key ID:** `<From CSV File>`
-- **AWS Secret Access Key:** `<From CSV File>`
+- **AWS Access Key ID:** ``
+- **AWS Secret Access Key:** `
 - **Default region name:** `us-east-1`
 - **Default output format:** `json`
 
@@ -34,11 +32,6 @@ aws sts get-caller-identity --profile assignment-access-key
 ```
 You should see:
 ```json
-{
-    "UserId": "AIDA5MF5BCWLYAAKNAHPT",
-    "Account": "919519434135",
-    "Arn": "arn:aws:iam::919519434135:user/vyankatesh"
-}
 ```
 
 ---
