@@ -66,7 +66,7 @@ terraform validate
 terraform plan
 ```
 > [!NOTE]
-> By default, `enable_nat_instance = true` and `enable_nat_gateway = false`. This spins up a `t2.micro` NAT instance instead of a paid NAT Gateway, keeping your deployment **100% Free-Tier compliant ($0.00)**.
+> By default, `enable_nat_instance = true` and `enable_nat_gateway = false`. This spins up a `t3.micro` NAT instance instead of a paid NAT Gateway, keeping your deployment **100% Free-Tier compliant ($0.00)**.
 
 ### Step 5: Deploy the Infrastructure (Apply)
 ```powershell
@@ -88,7 +88,7 @@ alb_public_dns              = "devops-assignment-alb-123456789.us-east-1.elb.ama
 health_check_url            = "http://devops-assignment-alb-123456789.us-east-1.elb.amazonaws.com/health"
 http_application_url        = "http://devops-assignment-alb-123456789.us-east-1.elb.amazonaws.com"
 https_application_url       = "https://devops-assignment-alb-123456789.us-east-1.elb.amazonaws.com"
-nat_strategy                = "100% Free-Tier EC2 NAT Instance (t2.micro - $0.00)"
+nat_strategy                = "100% Free-Tier EC2 NAT Instance (t3.micro - $0.00)"
 rds_endpoint                = "devops-assignment-mysql.cr123456789.us-east-1.rds.amazonaws.com:3306"
 s3_alb_access_logs_bucket   = "devops-assignment-alb-logs-abc123"
 s3_app_storage_bucket       = "devops-assignment-app-storage-abc123"

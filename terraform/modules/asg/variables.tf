@@ -26,8 +26,8 @@ variable "target_group_arn" {
 
 variable "instance_type" {
   type        = string
-  description = "EC2 Instance type (Free Tier: t2.micro or t3.micro)"
-  default     = "t2.micro"
+  description = "EC2 Instance type (Free Tier: t3.micro)"
+  default     = "t3.micro"
 }
 
 variable "min_size" {

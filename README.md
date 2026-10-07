@@ -25,11 +25,11 @@ flowchart TD
         
         subgraph Public_Subnets ["Public Subnets (us-east-1a & us-east-1b)"]
             ALB["Application Load Balancer (HTTPS / ACM Cert)"]
-            NAT["Free-Tier NAT Instance (t2.micro / $0.00)"]
+            NAT["Free-Tier NAT Instance (t3.micro / $0.00)"]
         end
 
         subgraph Private_App_Subnets ["Private App Subnets (us-east-1a & us-east-1b)"]
-            ASG["Auto Scaling Group (EC2 t2.micro)"]
+            ASG["Auto Scaling Group (EC2 t3.micro)"]
             App["Node.js 3-Tier Web App (Port 80)"]
         end
 
@@ -63,8 +63,8 @@ flowchart TD
 | :--- | :--- | :--- |
 | **Networking** | **VPC & Subnets** | Custom VPC (`10.0.0.0/16`) spanning 2 AZs with 6 subnets (2 Public, 2 Private App, 2 Private DB). |
 | **Networking** | **Routing & Gateways** | Internet Gateway for public ingress/egress; strictly isolated route table for database subnets. |
-| **FinOps / Cost** | **Free-Tier NAT** | Implemented a `t2.micro` NAT instance with iptables forwarding ($0.00 cost) avoiding the $32.40/mo AWS NAT Gateway fee. |
-| **Compute** | **EC2 ASG & Launch Template** | Amazon Linux 2023 `t2.micro` instances with systemd service bootstrap, IMDSv2 enforcement, and CPU Target Tracking. |
+| **FinOps / Cost** | **Free-Tier NAT** | Implemented a `t3.micro` NAT instance with iptables forwarding ($0.00 cost) avoiding the $32.40/mo AWS NAT Gateway fee. |
+| **Compute** | **EC2 ASG & Launch Template** | Amazon Linux 2023 `t3.micro` instances with systemd service bootstrap, IMDSv2 enforcement, and CPU Target Tracking. |
 | **Load Balancing** | **ALB & ACM HTTPS** | Application Load Balancer with HTTP (port 80) and HTTPS (port 443) listeners using an AWS Certificate Manager (ACM) SSL certificate. |
 | **Database** | **RDS MySQL 8.0** | `db.t3.micro` Single-AZ with 20GB gp3 storage deployed in isolated private subnets with encryption at rest. |
 | **Security** | **Secrets Manager** | Dynamic master password generation with JSON storage in Secrets Manager; zero cleartext passwords in git. |
@@ -78,8 +78,8 @@ flowchart TD
 
 | AWS Resource | Standard Cost Trap | Our Free-Tier Safe Implementation | Monthly Cost |
 | :--- | :--- | :--- | :--- |
-| **NAT Gateway** | ~$32.40/mo per NAT GW | **Free-Tier EC2 NAT Instance (`t2.micro`)** with iptables masquerading | **$0.00** |
-| **EC2 Compute** | Exceeding 750 hrs | `t2.micro` instances (`min=1`, `desired=1`, `max=2`) within 750 free hours/month | **$0.00** |
+| **NAT Gateway** | ~$32.40/mo per NAT GW | **Free-Tier EC2 NAT Instance (`t3.micro`)** with iptables masquerading | **$0.00** |
+| **EC2 Compute** | Exceeding 750 hrs | `t3.micro` instances (`min=1`, `desired=1`, `max=2`) within 750 free hours/month | **$0.00** |
 | **RDS MySQL** | Multi-AZ charges | `db.t3.micro` Single-AZ with 20GB gp3 storage within 750 free hours/month | **$0.00** |
 | **ACM SSL Cert** | Paid domain verification | Self-signed RSA certificate imported directly into **AWS Certificate Manager** | **$0.00** |
 | **S3 Buckets** | Growth over time | App storage bucket + ALB logs with 14-day auto-cleanup lifecycle rule | **$0.00** |

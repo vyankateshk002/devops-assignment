@@ -66,8 +66,8 @@ variable "ami_id" {
 
 variable "instance_type" {
   type        = string
-  description = "EC2 instance type (Free Tier: t2.micro or t3.micro)"
-  default     = "t2.micro"
+  description = "EC2 instance type (Free Tier: t3.micro)"
+  default     = "t3.micro"
 }
 
 variable "asg_min_size" {

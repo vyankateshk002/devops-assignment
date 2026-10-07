@@ -46,5 +46,5 @@ output "acm_certificate_arn" {
 
 output "nat_strategy" {
   description = "Active NAT strategy used for private subnet egress"
-  value       = var.enable_nat_instance && !var.enable_nat_gateway ? "100% Free-Tier EC2 NAT Instance (t2.micro - $0.00)" : "AWS Managed NAT Gateway (Paid)"
+  value       = var.enable_nat_instance && !var.enable_nat_gateway ? "100% Free-Tier EC2 NAT Instance (t3.micro - $0.00)" : "AWS Managed NAT Gateway (Paid)"
 }

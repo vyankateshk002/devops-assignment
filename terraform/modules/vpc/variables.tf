@@ -49,7 +49,7 @@ variable "enable_nat_gateway" {
 variable "nat_instance_type" {
   type        = string
   description = "EC2 instance type for the Free-Tier NAT instance"
-  default     = "t2.micro"
+  default     = "t3.micro"
 }
 
 variable "tags" {

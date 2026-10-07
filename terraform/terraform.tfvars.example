@@ -12,7 +12,7 @@ name_prefix = "devops-assignment"
 dummy_domain_name = "app.devops-assignment.internal"
 
 # Free-Tier Cost Controls
-instance_type       = "t2.micro"
+instance_type       = "t3.micro"
 db_instance_class   = "db.t3.micro"
 enable_nat_instance = true   # 100% Free-Tier NAT Instance ($0.00)
 enable_nat_gateway  = false  # Keep false to prevent AWS Managed NAT Gateway charges ($32.40/month)

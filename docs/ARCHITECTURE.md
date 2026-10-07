@@ -65,7 +65,7 @@ A major requirement for this project was to **strictly avoid paid cloud services
 
 ### A. Free-Tier NAT Instance vs. AWS Managed NAT Gateway
 - **The Problem:** An AWS Managed NAT Gateway costs ~$32.40/month plus data transfer fees ($0.045/hr), which is **not** covered by the Free Tier.
-- **Our Solution:** We implemented an EC2 NAT Instance using `t2.micro` running Amazon Linux 2023 with kernel IP forwarding and `iptables` masquerading.
+- **Our Solution:** We implemented an EC2 NAT Instance using `t3.micro` running Amazon Linux 2023 with kernel IP forwarding and `iptables` masquerading.
 - **Result:** $0.00 infrastructure cost. A single variable flag (`enable_nat_gateway = false`) allows seamless switching between enterprise NAT Gateway and Free-Tier NAT Instance.
 
 ### B. Single-AZ RDS MySQL
