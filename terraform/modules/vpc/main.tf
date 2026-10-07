@@ -149,20 +149,28 @@ resource "aws_instance" "nat" {
               #!/bin/bash
               set -xe
 
-              # Enable IP forwarding
+              # 1. Enable IP forwarding
               sysctl -w net.ipv4.ip_forward=1
               echo "net.ipv4.ip_forward = 1" > /etc/sysctl.d/99-nat.conf
 
-              # Determine default interface
+              # 2. Determine default interface
               DEFAULT_IFACE=$(ip -4 route list 0/0 | awk '{print $5; exit}')
 
-              # Configure iptables NAT and FORWARD rules
-              iptables -F FORWARD
-              iptables -P FORWARD ACCEPT
-              iptables -t nat -F POSTROUTING
-              iptables -t nat -A POSTROUTING -o $DEFAULT_IFACE -j MASQUERADE
+              # 3. Configure native nftables NAT immediately (built into AL2023)
+              nft add table ip nat || true
+              nft 'add chain ip nat postrouting { type nat hook postrouting priority 100; }' || true
+              nft add rule ip nat postrouting oifname "$DEFAULT_IFACE" masquerade || true
 
-              # Create persistent systemd unit for reboots
+              # 4. Install iptables for standard tooling compatibility
+              dnf install -y iptables || true
+              if command -v iptables &>/dev/null; then
+                iptables -F FORWARD || true
+                iptables -P FORWARD ACCEPT || true
+                iptables -t nat -F POSTROUTING || true
+                iptables -t nat -A POSTROUTING -o $DEFAULT_IFACE -j MASQUERADE || true
+              fi
+
+              # 5. Create persistent systemd unit for reboots
               cat <<'UNIT' > /etc/systemd/system/nat-setup.service
               [Unit]
               Description=NAT Routing Setup
@@ -170,7 +178,7 @@ resource "aws_instance" "nat" {
 
               [Service]
               Type=oneshot
-              ExecStart=/bin/bash -c "sysctl -w net.ipv4.ip_forward=1 && DEFAULT_IFACE=\$(ip -4 route list 0/0 | awk '{print \$5; exit}') && iptables -P FORWARD ACCEPT && iptables -t nat -A POSTROUTING -o \$DEFAULT_IFACE -j MASQUERADE"
+              ExecStart=/bin/bash -c "sysctl -w net.ipv4.ip_forward=1 && DEFAULT_IFACE=\$(ip -4 route list 0/0 | awk '{print \$5; exit}') && nft add table ip nat 2>/dev/null || true && nft 'add chain ip nat postrouting { type nat hook postrouting priority 100; }' 2>/dev/null || true && nft add rule ip nat postrouting oifname \"\$DEFAULT_IFACE\" masquerade 2>/dev/null || true"
               RemainAfterExit=true
 
               [Install]
